@@ -5,10 +5,10 @@ set -e
 
 
 thread_stream_pairs=("8 6" "16 12" "24 18" "32 24")
-thread_stream_pairs=("8 6" "16 12" "24 18" "30 24")
+# thread_stream_pairs=("8 6" "16 12" "24 18" "30 24")
 # thread_stream_pairs=("8 6" "16 12" "24 18" "29 24")
 # thread_stream_pairs=("24 18" "29 24")
-# thread_stream_pairs=("30 24")
+# thread_stream_pairs=("32 24")
 # thread_stream_pairs=("8 6" "15 12")
 nRuns=4
 
@@ -164,7 +164,7 @@ run_benchmark_2p() {
                 fi
             fi
 
-            if [[ "$isSameHost" == false && "$mpi_impl" == "mpich" && "$isngt" == false ]]; then
+            if [[ "$isSameHost" == false && "$mpi_impl" == "mpich" ]]; then
                 cmd+=(-hosts "$host_local,$host_remote")
             fi
 
@@ -194,10 +194,18 @@ run_benchmark_2p() {
             fi
 
             if [ "$isSameHost" == false ]; then
-                if [ "$mpi_impl" == "ompi" ]; then
-                    cmd+=(-x UCX_NET_DEVICES=mlx5_0:1)
+                if [[ "$isngt" == true ]]; then
+                    if [ "$mpi_impl" == "ompi" ]; then
+                        cmd+=(-x UCX_NET_DEVICES=mlx5_0:1)
+                    else
+                        cmd+=(-env UCX_NET_DEVICES mlx5_0:1)
+                    fi
                 else
-                    cmd+=(-env UCX_NET_DEVICES mlx5_0:1)
+                    if [ "$mpi_impl" == "ompi" ]; then
+                        cmd+=(-x UCX_NET_DEVICES=mlx5_2:1)
+                    else
+                        cmd+=(-env UCX_NET_DEVICES mlx5_2:1)
+                    fi
                 fi
             fi
 
@@ -225,12 +233,21 @@ run_benchmark_2p() {
             fi
 
             if [ "$isSameHost" == false ]; then
-                if [ "$mpi_impl" == "ompi" ]; then
-                    cmd+=(-x UCX_NET_DEVICES=mlx5_3:1)
+                if [[ "$isngt" == true ]]; then
+                    if [ "$mpi_impl" == "ompi" ]; then
+                        cmd+=(-x UCX_NET_DEVICES=mlx5_3:1)
+                    else
+                        cmd+=(-env UCX_NET_DEVICES mlx5_3:1)
+                    fi
                 else
-                    cmd+=(-env UCX_NET_DEVICES mlx5_3:1)
+                    if [ "$mpi_impl" == "ompi" ]; then
+                        cmd+=(-x UCX_NET_DEVICES=mlx5_0:1)
+                    else
+                        cmd+=(-env UCX_NET_DEVICES mlx5_0:1)
+                    fi
                 fi
             fi
+
 
             if [ "$mpi_impl" == "ompi" ]; then
                 cmd+=(-bind-to none)
@@ -262,19 +279,19 @@ if [ "$isngt" == false ]; then
     # Milan-Genoa OpenMPI
     # -----------------------------------
 
-    # local test
-    config=/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_test.py
-    run_benchmark_1p "h10aa0asdasdasd" $config 32
-
-    # local-local test
-    config_local=/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py
-    config_remote=/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py
-    run_benchmark_2p "h100_h100_ompi" "ompi" $config_local $config_remote 0 32 true
-
+    # # local test
+    # config=/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_test.py
+    # run_benchmark_1p "milan_no_ompi" $config 32
+    #
+    # # local-local test
+    # config_local=/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py
+    # config_remote=/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py
+    # run_benchmark_2p "milan_milan_ompi" "ompi" $config_local $config_remote 0 32 true
+    #
     # local-remote test
-    config_local=/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py
-    config_remote=/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py
-    run_benchmark_2p "h100_remoteh100_ompi" "ompi" $config_local $config_remote 32 32 false
+    config_local=/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py
+    config_remote=/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py
+    run_benchmark_2p "milan_genoa_ompi" "ompi" $config_local $config_remote 32 48 false
 
 
     # Milan-Genoa MPICH
@@ -282,17 +299,17 @@ if [ "$isngt" == false ]; then
 
     # # local test
     # config=/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_test.py
-    # run_benchmark_1p "milan_2lumiblocks" $config 32
+    # run_benchmark_1p "milan_no_mpich" $config 32
 
     # # local-local test
     # config_local=/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py
     # config_remote=/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py
     # run_benchmark_2p "milan_milan_mpich" "mpich" $config_local $config_remote 0 32 true
 
-    # local-remote test
-    config_local=/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py
-    config_remote=/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py
-    run_benchmark_2p "milan_genoa_mpich_tmp" "mpich" $config_local $config_remote 32 48 false
+    # # local-remote test
+    # config_local=/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py
+    # config_remote=/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py
+    # run_benchmark_2p "milan_genoa_mpich" "mpich" $config_local $config_remote 32 48 false
 
 
 else
