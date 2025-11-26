@@ -34,6 +34,7 @@ class Config(GlobalConfig):
 
     host_local = ""
     host_remote = ""
+    is_same_machine = False
     ucx_tls = "all"
     ucx_net_devices_local = ""
     ucx_net_devices_remote = ""
@@ -68,7 +69,7 @@ class Config(GlobalConfig):
         elif self.config_local != "":
             # plain good old cmsRun without MPI
             if not os.path.isfile(self.config_local):
-                print("config_local file does not exist.")
+                print("config_local file %s does not exist." % self.config_local)
                 sys.exit(1)
             if len(self.cpus_local) == 0:
                 print("cpus_local not set.")
@@ -99,7 +100,6 @@ def run_benchmark(config: Config):
 
     isStandalone = (config.config_local != "" and config.config_remote == "")
     isNGT = config.environment in ["NGT", "NGT-MPI"]
-    isSameMachine = (config.host_local == config.host_remote)
 
     cmd = []
 
@@ -116,25 +116,28 @@ def run_benchmark(config: Config):
     elif config.mpi_impl == "OpenMPI":
 
         cmd += [
+            "env LD_PRELOAD=/usr/lib64/libnvidia-ml.so.1" if isNGT else "",
             "mpirun" if isNGT else "cmsenv_mpirun",
             "" if isNGT else "--mca oob_tcp_if_exclude enp4s0f4u1u2c2",
-            *(["--mca pml ob1 --mca btl vader,self,tcp"] if isSameMachine else [
+            *(["--mca pml ob1 --mca btl vader,self,tcp"] if config.is_same_machine else [
                 "--mca pml ucx",
                 "-x UCX_TLS=" + config.ucx_tls,
                 "-x UCX_LOG_LEVEL=info", # to se e.g. which TLS are used
                 "-x UCX_RNDV_THRESH=inf",
             ]),
+            "--hostfile /etc/mpi/hostfile" if isNGT else "",
+            "--prtemca plm_ssh_agent " + os.path.abspath("env_ompi_kubexec.sh") if isNGT else "",
             f"-x EXPERIMENT_THREADS={config.ts[0]}",
             f"-x EXPERIMENT_STREAMS={config.ts[1]}",
             "-np 1",
-            "--host " + config.host_local,
+            "" if isNGT else "--host " + config.host_local,
             "" if config.cuda_visible_devices_local == "all" else "-x CUDA_VISIBLE_DEVICES=" + config.cuda_visible_devices_local,
             "" if config.ucx_net_devices_local == "" else "-x UCX_NET_DEVICES=" + config.ucx_net_devices_local,
             "--bind-to none numactl --physcpubind=" + ",".join(map(str, config.cpus_local)),
             "cmsRun " + config.config_local,
             ":",
             "-np 1",
-            "--host " + config.host_remote,
+            "" if isNGT else "--host " + config.host_remote,
             "" if config.cuda_visible_devices_remote == "all" else "-x CUDA_VISIBLE_DEVICES=" + config.cuda_visible_devices_remote,
             "" if config.ucx_net_devices_remote == "" else "-x UCX_NET_DEVICES=" + config.ucx_net_devices_remote,
             "--bind-to none numactl --physcpubind=" + ",".join(map(str, config.cpus_remote)),
@@ -142,7 +145,9 @@ def run_benchmark(config: Config):
         ]
     elif config.mpi_impl == "MPICH":
         cmd = [
+            "env LD_PRELOAD=/usr/lib64/libnvidia-ml.so.1" if isNGT else "",
             "mpirun" if isNGT else "cmsenv_mpirun",
+            "--launcher-exec " + os.path.abspath("env_mpich_kubexec.sh") if isNGT else "",
             "-genv UCX_TLS=" + config.ucx_tls,
             "-genv UCX_LOG_LEVEL=info", # to se e.g. which TLS are used
             "-genv UCX_RNDV_THRESH=inf",
@@ -214,13 +219,13 @@ def main():
     GlobalConfig.log_dir = "./logs"
 
 
-    firstRunID = 3
+    firstRunID = 0
     lastRunID = 4
     for i_run in range(firstRunID, lastRunID): # [first,last)
 
         GlobalConfig.runID = i_run
 
-        if True:
+        if False:
             # Milan standalone (CPU only)
             # ------------------------------------------------------------
             config = Config()
@@ -241,7 +246,7 @@ def main():
                 run_benchmark(config)
                 if config.run_first_ts_pair_only: break
 
-        if True:
+        if False:
             # Milan standalone
             # ------------------------------------------------------------
             config = Config()
@@ -262,13 +267,14 @@ def main():
                 if config.run_first_ts_pair_only: break
 
 
-        if True:
+        if False:
             # Milan-Milan (CPU only)
             # ------------------------------------------------------------
             config = Config()
             config.environment = "HLT"
             config.host_local = "gputest-milan-02"
             config.host_remote = "gputest-milan-02"
+            config.is_same_machine = True
             config.cuda_visible_devices_local = ""
             config.cuda_visible_devices_remote = ""
             config.config_local = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py"
@@ -286,13 +292,14 @@ def main():
                 run_benchmark(config)
                 if config.run_first_ts_pair_only: break
 
-        if True:
+        if False:
             # Milan-Milan
             # ------------------------------------------------------------
             config = Config()
             config.environment = "HLT"
             config.host_local = "gputest-milan-02"
             config.host_remote = "gputest-milan-02"
+            config.is_same_machine = True
             config.config_local = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py"
             config.config_remote = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py"
             config.label = "milan_milan_2sockets"
@@ -309,7 +316,7 @@ def main():
                 if config.run_first_ts_pair_only: break
 
 
-        if True:
+        if False:
             # Milan-Genoa (cpu only)
             # ------------------------------------------------------------
             config = Config()
@@ -337,7 +344,7 @@ def main():
                 if config.run_first_ts_pair_only: break
 
      
-        if True:
+        if False:
             # Milan-Genoa
             # ------------------------------------------------------------
             config = Config()
@@ -368,8 +375,10 @@ def main():
             # ------------------------------------------------------------
             config = Config()
             config.environment = "NGT"
-            config.config_local = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_test.py"
+            config.config_local = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_test.py"
             config.label = "ngt_standalone"
+            config.cuda_visible_devices_local = "2"
+
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
             for ts in ts_pairs:
@@ -378,46 +387,109 @@ def main():
 
                 run_benchmark(config)
                 if config.run_first_ts_pair_only: break
+        
+        if False:
+            # NGT standalone (CPU only)
+            # ------------------------------------------------------------
+            config = Config()
+            config.environment = "NGT"
+            config.config_local = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_test.py"
+            config.label = "ngt_standalone_cpuonly"
+            config.cuda_visible_devices_local = ""
+            ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
+            for ts in ts_pairs:
+                config.ts = ts
+                config.cpus_local = range(32, 32 + ts[0])
 
+                run_benchmark(config)
+                if config.run_first_ts_pair_only: break
 
         if False:
             # NGT-NGT (single machine)
             # ------------------------------------------------------------
             config = Config()
             config.environment = "NGT"
-            config.config_local = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py"
-            config.config_remote = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py"
+            config.config_local = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py"
+            config.config_remote = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py"
+            config.is_same_machine = True
             config.cuda_visible_devices_local = ""
-            config.cuda_visible_devices_remote = "1"
+            config.cuda_visible_devices_remote = "2"
             config.label = "ngt_ngt_2sockets"
+
+            ts_pairs = [[29, 24], [24, 18], [16, 12], [8, 6]]
+            for ts in ts_pairs:
+                config.ts = ts
+                config.cpus_local = range(1, 1 + ts[0])
+                config.cpus_remote = range(32, 32 + ts[0])
+
+                run_benchmark(config)
+                if config.run_first_ts_pair_only: break
+
+
+        if False:
+            # NGT-NGT (single machine, CPU only)
+            # ------------------------------------------------------------
+            config = Config()
+            config.environment = "NGT"
+            config.config_local = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py"
+            config.config_remote = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py"
+            config.is_same_machine = True
+            config.cuda_visible_devices_local = ""
+            config.cuda_visible_devices_remote = ""
+            config.label = "ngt_ngt_2sockets_cpuonly"
+
+            ts_pairs = [[29, 24], [24, 18], [16, 12], [8, 6]]
+            for ts in ts_pairs:
+                config.ts = ts
+                config.cpus_local = range(1, 1 + ts[0])
+                config.cpus_remote = range(32, 32 + ts[0])
+
+                run_benchmark(config)
+                if config.run_first_ts_pair_only: break
+
+
+        if True:
+            # NGT-NGT (two machines, CPU only)
+            # ------------------------------------------------------------
+            config = Config()
+            config.environment = "NGT-MPI"
+            config.ucx_net_devices_local = "mlx5_2:1"
+            config.ucx_net_devices_remote = "mlx5_2:1"
+            config.cuda_visible_devices_local = ""
+            config.cuda_visible_devices_remote = ""
+            config.config_local = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py"
+            config.config_remote = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py"
+            config.ucx_tls = "rc_mlx5,rc_x,ud_x,sm,self,cuda_copy,cuda_ipc,gdr_copy"
+            config.label = "ngt_ngt_ib400G_cpuonly"
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
             for ts in ts_pairs:
                 config.ts = ts
                 config.cpus_local = range(32, 32 + ts[0])
-                config.cpus_remote = range(48, 48 + ts[0])
+                config.cpus_remote = range(32, 32 + ts[0])
 
                 run_benchmark(config)
                 if config.run_first_ts_pair_only: break
-        
-        if False:
+
+        if True:
             # NGT-NGT (two machines)
             # ------------------------------------------------------------
             config = Config()
             config.environment = "NGT-MPI"
             config.ucx_net_devices_local = "mlx5_2:1"
-            config.ucx_net_devices_remote = "mlx5_0:1"
-            config.cuda_visible_devices_local = ""
-            config.cuda_visible_devices_remote = "1"
-            config.config_local = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py"
-            config.config_remote = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py"
+            config.ucx_net_devices_remote = "mlx5_2:1"
+            config.cuda_visible_devices_local = "2"
+            config.cuda_visible_devices_remote = "2"
+            config.config_local = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py"
+            config.config_remote = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py"
+            config.ucx_tls = "rc_mlx5,rc_x,ud_x,sm,self,cuda_copy,cuda_ipc,gdr_copy"
             config.label = "ngt_ngt_ib400G"
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
             for ts in ts_pairs:
                 config.ts = ts
                 config.cpus_local = range(32, 32 + ts[0])
-                config.cpus_remote = range(48, 48 + ts[0])
+                config.cpus_remote = range(32, 32 + ts[0])
 
                 run_benchmark(config)
                 if config.run_first_ts_pair_only: break
