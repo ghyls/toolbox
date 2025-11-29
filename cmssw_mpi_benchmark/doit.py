@@ -129,6 +129,7 @@ def run_benchmark(config: Config):
             "--prtemca plm_ssh_agent " + os.path.abspath("env_ompi_kubexec.sh") if isNGT else "",
             f"-x EXPERIMENT_THREADS={config.ts[0]}",
             f"-x EXPERIMENT_STREAMS={config.ts[1]}",
+            "--map-by node",
             "-np 1",
             "" if isNGT else "--host " + config.host_local,
             "" if config.cuda_visible_devices_local == "all" else "-x CUDA_VISIBLE_DEVICES=" + config.cuda_visible_devices_local,
@@ -155,6 +156,7 @@ def run_benchmark(config: Config):
             "--bind-to none",
             f"-genv EXPERIMENT_THREADS {config.ts[0]}",
             f"-genv EXPERIMENT_STREAMS {config.ts[1]}",
+            "" if isSameMachine else "-ppn 1", # one process per node (needed in case each node has multiple sockets)
             "-np 1",
             "" if config.cuda_visible_devices_local == "all" else "-env CUDA_VISIBLE_DEVICES=" + config.cuda_visible_devices_local,
             "" if config.ucx_net_devices_local == "" else "-env UCX_NET_DEVICES "+ config.ucx_net_devices_local,
