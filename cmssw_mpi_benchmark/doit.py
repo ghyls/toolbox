@@ -156,7 +156,7 @@ def run_benchmark(config: Config):
             "--bind-to none",
             f"-genv EXPERIMENT_THREADS {config.ts[0]}",
             f"-genv EXPERIMENT_STREAMS {config.ts[1]}",
-            "" if isSameMachine else "-ppn 1", # one process per node (needed in case each node has multiple sockets)
+            "" if config.is_same_machine else "-ppn 1", # one process per node (needed in case each node has multiple sockets)
             "-np 1",
             "" if config.cuda_visible_devices_local == "all" else "-env CUDA_VISIBLE_DEVICES=" + config.cuda_visible_devices_local,
             "" if config.ucx_net_devices_local == "" else "-env UCX_NET_DEVICES "+ config.ucx_net_devices_local,
@@ -215,7 +215,7 @@ def main():
     # Before running tests, enable "print_cmd_no_run" to check that the commands are correct!
 
 
-    GlobalConfig.mpi_impl = "OpenMPI"
+    GlobalConfig.mpi_impl = "MPICH"
     GlobalConfig.print_cmd_no_run = False
     GlobalConfig.run_first_ts_pair_only = False
     GlobalConfig.log_dir = "./logs"
