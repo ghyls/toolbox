@@ -152,7 +152,7 @@ def run_benchmark(config: Config):
             "-genv UCX_TLS=" + config.ucx_tls,
             "-genv UCX_LOG_LEVEL=info", # to se e.g. which TLS are used
             "-genv UCX_RNDV_THRESH=inf",
-            "-hosts " + config.host_local + "," + config.host_remote,
+            "" if isNGT else "-hosts " + config.host_local + "," + config.host_remote,
             "--bind-to none",
             f"-genv EXPERIMENT_THREADS {config.ts[0]}",
             f"-genv EXPERIMENT_STREAMS {config.ts[1]}",
@@ -428,7 +428,7 @@ def main():
                 if config.run_first_ts_pair_only: break
 
 
-        if False:
+        if True:
             # NGT-NGT (single machine, CPU only)
             # ------------------------------------------------------------
             config = Config()
@@ -450,7 +450,7 @@ def main():
                 if config.run_first_ts_pair_only: break
 
 
-        if True:
+        if False:
             # NGT-NGT (two machines, CPU only)
             # ------------------------------------------------------------
             config = Config()
