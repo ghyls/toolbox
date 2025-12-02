@@ -215,7 +215,7 @@ def main():
     # Before running tests, enable "print_cmd_no_run" to check that the commands are correct!
 
 
-    GlobalConfig.mpi_impl = "MPICH"
+    GlobalConfig.mpi_impl = "OpenMPI"
     GlobalConfig.print_cmd_no_run = False
     GlobalConfig.run_first_ts_pair_only = False
     GlobalConfig.log_dir = "./logs"
@@ -269,7 +269,7 @@ def main():
                 if config.run_first_ts_pair_only: break
 
 
-        if False:
+        if True:
             # Milan-Milan (CPU only)
             # ------------------------------------------------------------
             config = Config()
@@ -288,13 +288,13 @@ def main():
 
             for ts in ts_pairs:
                 config.ts = ts
-                config.cpus_local = range(32, 32 + ts[0])
-                config.cpus_remote = range(48, 48 + ts[0])
+                config.cpus_local = range(0, 0 + ts[0])
+                config.cpus_remote = range(32, 32 + ts[0])
 
                 run_benchmark(config)
                 if config.run_first_ts_pair_only: break
 
-        if False:
+        if True:
             # Milan-Milan
             # ------------------------------------------------------------
             config = Config()
@@ -311,8 +311,8 @@ def main():
 
             for ts in ts_pairs:
                 config.ts = ts
-                config.cpus_local = range(32, 32 + ts[0])
-                config.cpus_remote = range(48, 48 + ts[0])
+                config.cpus_local = range(0, 0 + ts[0])
+                config.cpus_remote = range(32, 32 + ts[0])
 
                 run_benchmark(config)
                 if config.run_first_ts_pair_only: break
@@ -428,7 +428,7 @@ def main():
                 if config.run_first_ts_pair_only: break
 
 
-        if True:
+        if False:
             # NGT-NGT (single machine, CPU only)
             # ------------------------------------------------------------
             config = Config()
@@ -473,7 +473,7 @@ def main():
                 run_benchmark(config)
                 if config.run_first_ts_pair_only: break
 
-        if True:
+        if False:
             # NGT-NGT (two machines)
             # ------------------------------------------------------------
             config = Config()
