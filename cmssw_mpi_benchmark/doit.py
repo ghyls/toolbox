@@ -233,7 +233,7 @@ def main():
             config = Config()
             config.environment = "HLT"
             config.host_local = "gputest-milan-02"
-            config.config_local = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_test.py"
+            config.config_local = "hlt_test.py"
             config.label = "milan_standalone_cpuonly"
             config.cuda_visible_devices_local = ""
 
@@ -254,7 +254,7 @@ def main():
             config = Config()
             config.environment = "HLT"
             config.host_local = "gputest-milan-02"
-            config.config_local = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_test.py"
+            config.config_local = "hlt_test.py"
             config.label = "milan_standalone"
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
@@ -279,8 +279,8 @@ def main():
             config.is_same_machine = True
             config.cuda_visible_devices_local = ""
             config.cuda_visible_devices_remote = ""
-            config.config_local = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py"
-            config.config_remote = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py"
+            config.config_local = "hlt_local.py"
+            config.config_remote = "hlt_remote.py"
             config.label = "milan_milan_2sockets_cpuonly"
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
@@ -302,8 +302,8 @@ def main():
             config.host_local = "gputest-milan-02"
             config.host_remote = "gputest-milan-02"
             config.is_same_machine = True
-            config.config_local = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py"
-            config.config_remote = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py"
+            config.config_local = "hlt_local.py"
+            config.config_remote = "hlt_remote.py"
             config.label = "milan_milan_2sockets"
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
@@ -330,8 +330,8 @@ def main():
             config.cuda_visible_devices_local = ""
             config.cuda_visible_devices_remote = ""
             config.ucx_tls = "rc_mlx5,rc_x,ud_x,sm,self,cuda_copy,cuda_ipc,gdr_copy"
-            config.config_local = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py"
-            config.config_remote = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py"
+            config.config_local = "hlt_local.py"
+            config.config_remote = "hlt_remote.py"
             config.label = "milan_genoa_ib100G_cpuonly"
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
@@ -356,8 +356,8 @@ def main():
             config.ucx_net_devices_local = "mlx5_2:1"
             config.ucx_net_devices_remote = "mlx5_0:1"
             config.ucx_tls = "rc_mlx5,rc_x,ud_x,sm,self,cuda_copy,cuda_ipc,gdr_copy"
-            config.config_local = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py"
-            config.config_remote = "/data/user/mario/sw/cmssw/anna-cmssw/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py"
+            config.config_local = "hlt_local.py"
+            config.config_remote = "hlt_remote.py"
             config.label = "milan_genoa_ib100G"
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
