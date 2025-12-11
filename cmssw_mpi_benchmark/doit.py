@@ -2,10 +2,29 @@
 
 
 import re
-import numpy as np
 import os
 import subprocess
 import sys
+
+
+
+# switch on/off each test
+# options common to all tests are set directly in main()
+RUN_MILAN_STANDALONE_CPUONLY =  True
+RUN_MILAN_STANDALONE =          True
+RUN_MILAN_MILAN_CPUONLY =       True
+RUN_MILAN_MILAN =               True
+RUN_MILAN_GENOA_CPUONLY =       True
+RUN_MILAN_GENOA =               True
+
+RUN_NGT_STANDALONE =            True
+RUN_NGT_STANDALONE_CPUONLY =    True
+RUN_NGT_NGT_XSOCKET =           True
+RUN_NGT_NGT_XSOCKET_CPUONLY =   True
+RUN_NGT_NGT =                   True
+RUN_NGT_NGT_CPUONLY =           True
+
+
 
 
 # config common to all benchmarks on a single run
@@ -227,7 +246,7 @@ def main():
 
         GlobalConfig.runID = i_run
 
-        if False:
+        if RUN_MILAN_STANDALONE_CPUONLY == True:
             # Milan standalone (CPU only)
             # ------------------------------------------------------------
             config = Config()
@@ -238,7 +257,6 @@ def main():
             config.cuda_visible_devices_local = ""
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
-            # ts_pairs = [[32, 24]]
 
             for ts in ts_pairs:
                 config.ts = ts
@@ -248,7 +266,7 @@ def main():
                 run_benchmark(config)
                 if config.run_first_ts_pair_only: break
 
-        if False:
+        if RUN_MILAN_STANDALONE == True:
             # Milan standalone
             # ------------------------------------------------------------
             config = Config()
@@ -258,7 +276,6 @@ def main():
             config.label = "milan_standalone"
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
-            # ts_pairs = [[32, 24]]
 
             for ts in ts_pairs:
                 config.ts = ts
@@ -269,7 +286,7 @@ def main():
                 if config.run_first_ts_pair_only: break
 
 
-        if True:
+        if RUN_MILAN_MILAN_CPUONLY == True:
             # Milan-Milan (CPU only)
             # ------------------------------------------------------------
             config = Config()
@@ -284,7 +301,6 @@ def main():
             config.label = "milan_milan_2sockets_cpuonly"
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
-            # ts_pairs = [[32, 24]]
 
             for ts in ts_pairs:
                 config.ts = ts
@@ -294,7 +310,7 @@ def main():
                 run_benchmark(config)
                 if config.run_first_ts_pair_only: break
 
-        if True:
+        if RUN_MILAN_MILAN == True:
             # Milan-Milan
             # ------------------------------------------------------------
             config = Config()
@@ -307,7 +323,6 @@ def main():
             config.label = "milan_milan_2sockets"
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
-            # ts_pairs = [[32, 24]]
 
             for ts in ts_pairs:
                 config.ts = ts
@@ -318,7 +333,7 @@ def main():
                 if config.run_first_ts_pair_only: break
 
 
-        if False:
+        if RUN_MILAN_GENOA_CPUONLY == True:
             # Milan-Genoa (cpu only)
             # ------------------------------------------------------------
             config = Config()
@@ -335,7 +350,6 @@ def main():
             config.label = "milan_genoa_ib100G_cpuonly"
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
-            # ts_pairs = [[32, 24]]
             
             for ts in ts_pairs:
                 config.ts = ts
@@ -346,7 +360,7 @@ def main():
                 if config.run_first_ts_pair_only: break
 
      
-        if False:
+        if RUN_MILAN_GENOA == True:
             # Milan-Genoa
             # ------------------------------------------------------------
             config = Config()
@@ -361,7 +375,6 @@ def main():
             config.label = "milan_genoa_ib100G"
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
-            # ts_pairs = [[32, 24]]
             
             for ts in ts_pairs:
                 config.ts = ts
@@ -372,7 +385,7 @@ def main():
                 if config.run_first_ts_pair_only: break
         
 
-        if False:
+        if RUN_NGT_STANDALONE == True:
             # NGT standalone
             # ------------------------------------------------------------
             config = Config()
@@ -390,7 +403,7 @@ def main():
                 run_benchmark(config)
                 if config.run_first_ts_pair_only: break
         
-        if False:
+        if RUN_NGT_STANDALONE_CPUONLY == True:
             # NGT standalone (CPU only)
             # ------------------------------------------------------------
             config = Config()
@@ -406,7 +419,7 @@ def main():
                 run_benchmark(config)
                 if config.run_first_ts_pair_only: break
 
-        if False:
+        if RUN_NGT_NGT_XSOCKET == True:
             # NGT-NGT (single machine)
             # ------------------------------------------------------------
             config = Config()
@@ -428,7 +441,7 @@ def main():
                 if config.run_first_ts_pair_only: break
 
 
-        if False:
+        if RUN_NGT_NGT_XSOCKET_CPUONLY == True:
             # NGT-NGT (single machine, CPU only)
             # ------------------------------------------------------------
             config = Config()
@@ -450,7 +463,7 @@ def main():
                 if config.run_first_ts_pair_only: break
 
 
-        if False:
+        if RUN_NGT_NGT_CPUONLY == True:
             # NGT-NGT (two machines, CPU only)
             # ------------------------------------------------------------
             config = Config()
@@ -473,7 +486,7 @@ def main():
                 run_benchmark(config)
                 if config.run_first_ts_pair_only: break
 
-        if False:
+        if RUN_NGT_NGT == True:
             # NGT-NGT (two machines)
             # ------------------------------------------------------------
             config = Config()
@@ -495,14 +508,6 @@ def main():
 
                 run_benchmark(config)
                 if config.run_first_ts_pair_only: break
-        
-
-
-
-
-
-
-
 
 
 
