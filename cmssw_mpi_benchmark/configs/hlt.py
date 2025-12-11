@@ -7,7 +7,15 @@ from hlt_v6_cff import process
 
 # run over HLTPhysics data from run 383363
 # process.load('run383631_cff')
-process.load('run396102_cff')
+
+# see if /cmsnfsgpu_data/gpu_data/ exists and use it if yes
+import os
+if os.path.exists('/cmsnfsgpu_data/gpu_data/'):
+    print("Loading run396102_cff.py")
+    process.load('run396102_cff')
+else:
+    print("Loading run396102_cff_ngt.py")
+    process.load('run396102_cff_ngt')
 
 del process.HLTAnalyzerEndpath
 
@@ -23,6 +31,7 @@ process = customizeHLTforCMSSW(process)
 
 # create the DAQ working directory for DQMFileSaverPB
 import os
+print("Creating DAQ working directory %s/run%d" % (process.EvFDaqDirector.baseDir.value(), process.EvFDaqDirector.runNumber.value()))
 os.makedirs('%s/run%d' % (process.EvFDaqDirector.baseDir.value(), process.EvFDaqDirector.runNumber.value()), exist_ok=True)
 
 # run with 32 threads, 24 concurrent events, 2 concurrent lumisections, over 10k events
