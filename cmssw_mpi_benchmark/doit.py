@@ -10,19 +10,19 @@ import sys
 
 # switch on/off each test
 # options common to all tests are set directly in main()
-RUN_MILAN_STANDALONE_CPUONLY =  True
-RUN_MILAN_STANDALONE =          True
-RUN_MILAN_MILAN_CPUONLY =       True
-RUN_MILAN_MILAN =               True
-RUN_MILAN_GENOA_CPUONLY =       True
-RUN_MILAN_GENOA =               True
+RUN_MILAN_STANDALONE_CPUONLY =  False
+RUN_MILAN_STANDALONE =          False
+RUN_MILAN_MILAN_CPUONLY =       False
+RUN_MILAN_MILAN =               False
+RUN_MILAN_GENOA_CPUONLY =       False
+RUN_MILAN_GENOA =               False
 
-RUN_NGT_STANDALONE =            True
-RUN_NGT_STANDALONE_CPUONLY =    True
-RUN_NGT_NGT_XSOCKET =           True
-RUN_NGT_NGT_XSOCKET_CPUONLY =   True
-RUN_NGT_NGT =                   True
+RUN_NGT_STANDALONE_CPUONLY =    False
+RUN_NGT_STANDALONE =            False
+RUN_NGT_NGT_XSOCKET_CPUONLY =   False
+RUN_NGT_NGT_XSOCKET =           False
 RUN_NGT_NGT_CPUONLY =           True
+RUN_NGT_NGT =                   True
 
 
 
@@ -40,7 +40,7 @@ class GlobalConfig:
     # Run just the first t,s pair of the list and move to the next setup
     run_first_ts_pair_only = False
 
-    log_dir = "./logs"
+    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
@@ -141,11 +141,12 @@ def run_benchmark(config: Config):
             *(["--mca pml ob1 --mca btl vader,self,tcp"] if config.is_same_machine else [
                 "--mca pml ucx",
                 "-x UCX_TLS=" + config.ucx_tls,
-                "-x UCX_LOG_LEVEL=info", # to se e.g. which TLS are used
-                "-x UCX_RNDV_THRESH=inf",
+                "-x UCX_PROTO_INFO=y", # to se e.g. which TLS are used
+                "-x UCX_USE_MT_MUTEX=y",
+                "-x UCX_RNDV_SCHEME=put_ppln"
             ]),
             "--hostfile /etc/mpi/hostfile" if isNGT else "",
-            "--prtemca plm_ssh_agent " + os.path.abspath("env_ompi_kubexec.sh") if isNGT else "",
+            "--prtemca plm_ssh_agent " + os.path.join(os.path.dirname(os.path.abspath(__file__)), "env_ompi_kubexec.sh") if isNGT else "",
             f"-x EXPERIMENT_THREADS={config.ts[0]}",
             f"-x EXPERIMENT_STREAMS={config.ts[1]}",
             "--map-by node",
@@ -200,7 +201,10 @@ def run_benchmark(config: Config):
     print("Command:")
     print(" ".join(cmd))
     if not config.print_cmd_no_run:
+        log_file_path = os.path.join(config.log_dir,
+                                     f"{config.mpi_impl}_{config.label}_t{config.ts[0]}_s{config.ts[1]}_r{config.runID}.log")
         print("Logging to:", tmp_log_file)
+        print("Final log will be saved to:", log_file_path)
         with open(tmp_log_file, "w") as log_file:
             log_file.write("Command:\n")
             log_file.write(" ".join(cmd) + "\n")
@@ -216,10 +220,9 @@ def run_benchmark(config: Config):
 
         throughput_this_run = get_throughput_from_log(tmp_log_file)
         # append throughput to log filename and rename
-        log_file_path = os.path.join(config.log_dir,
-                                     f"{config.mpi_impl}_{config.label}_t{config.ts[0]}_s{config.ts[1]}_r{config.runID}.log")
+
         os.rename(tmp_log_file, log_file_path)
-        print("Logs saved to:", log_file_path)
+        print("Final log saved.")
         print("Throughput this run:", throughput_this_run, "events/s")
         print()
 
@@ -237,7 +240,7 @@ def main():
     GlobalConfig.mpi_impl = "OpenMPI"
     GlobalConfig.print_cmd_no_run = False
     GlobalConfig.run_first_ts_pair_only = False
-    GlobalConfig.log_dir = "./logs"
+    GlobalConfig.log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
 
 
     firstRunID = 0
@@ -390,7 +393,7 @@ def main():
             # ------------------------------------------------------------
             config = Config()
             config.environment = "NGT"
-            config.config_local = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_test.py"
+            config.config_local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_test.py")
             config.label = "ngt_standalone"
             config.cuda_visible_devices_local = "2"
 
@@ -408,7 +411,7 @@ def main():
             # ------------------------------------------------------------
             config = Config()
             config.environment = "NGT"
-            config.config_local = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_test.py"
+            config.config_local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_test.py")
             config.label = "ngt_standalone_cpuonly"
             config.cuda_visible_devices_local = ""
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
@@ -424,8 +427,8 @@ def main():
             # ------------------------------------------------------------
             config = Config()
             config.environment = "NGT"
-            config.config_local = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py"
-            config.config_remote = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py"
+            config.config_local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_local.py")
+            config.config_remote = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_remote.py")
             config.is_same_machine = True
             config.cuda_visible_devices_local = ""
             config.cuda_visible_devices_remote = "2"
@@ -446,8 +449,8 @@ def main():
             # ------------------------------------------------------------
             config = Config()
             config.environment = "NGT"
-            config.config_local = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py"
-            config.config_remote = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py"
+            config.config_local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_local.py")
+            config.config_remote = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_remote.py")
             config.is_same_machine = True
             config.cuda_visible_devices_local = ""
             config.cuda_visible_devices_remote = ""
@@ -472,8 +475,8 @@ def main():
             config.ucx_net_devices_remote = "mlx5_2:1"
             config.cuda_visible_devices_local = ""
             config.cuda_visible_devices_remote = ""
-            config.config_local = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py"
-            config.config_remote = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py"
+            config.config_local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_local.py")
+            config.config_remote = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_remote.py")
             config.ucx_tls = "rc_mlx5,rc_x,ud_x,sm,self,cuda_copy,cuda_ipc,gdr_copy"
             config.label = "ngt_ngt_ib400G_cpuonly"
 
@@ -495,8 +498,8 @@ def main():
             config.ucx_net_devices_remote = "mlx5_2:1"
             config.cuda_visible_devices_local = "2"
             config.cuda_visible_devices_remote = "2"
-            config.config_local = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_local.py"
-            config.config_remote = "/shared/CMSSW_16_0_0_pre1/src/HeterogeneousCore/MPICore/test/test_scripts_and_configs/real/hlt_remote.py"
+            config.config_local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_local.py")
+            config.config_remote = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_remote.py")
             config.ucx_tls = "rc_mlx5,rc_x,ud_x,sm,self,cuda_copy,cuda_ipc,gdr_copy"
             config.label = "ngt_ngt_ib400G"
 
