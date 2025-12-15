@@ -1,10 +1,16 @@
 #! /bin/bash
 
-# path/to/CMSSW_X_Y_Z/
-CMSSW_BASE=
+# get CMSSW_BASE from a file in this directory named "cmssw_basedir"
+if [ ! -f cmssw_basedir ]; then
+    echo "Please create a file named 'cmssw_basedir' in toolbox/bin/ containing the path to use as 'CMSSW_BASE', e.g. '/path/to/CMSSW_16_0_0_pre3/'."
+    exit 1
+fi
 
-if [ -z "$CMSSW_BASE" ]; then
-    echo "Please open toolbox/bin/setup_env.sh and set the CMSSW_BASE variable to your CMSSW base path."
+
+CMSSW_BASE=$(cat cmssw_basedir)
+
+if [ ! -d $CMSSW_BASE ]; then
+    echo "The CMSSW_BASE directory '$CMSSW_BASE' does not exist. Please check the path in 'toolbox/bin/cmssw_basedir'."
     exit 1
 fi
 
