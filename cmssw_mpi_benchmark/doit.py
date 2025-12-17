@@ -17,12 +17,12 @@ RUN_MILAN_MILAN =               False
 RUN_MILAN_GENOA_CPUONLY =       False
 RUN_MILAN_GENOA =               False
 
-RUN_NGT_STANDALONE_CPUONLY =    False
-RUN_NGT_STANDALONE =            False
-RUN_NGT_NGT_XSOCKET_CPUONLY =   False
-RUN_NGT_NGT_XSOCKET =           False
-RUN_NGT_NGT_CPUONLY =           True
-RUN_NGT_NGT =                   True
+RUN_NGT_STANDALONE_CPUONLY =    True
+RUN_NGT_STANDALONE =            True
+RUN_NGT_NGT_XSOCKET_CPUONLY =   True
+RUN_NGT_NGT_XSOCKET =           True
+RUN_NGT_NGT_CPUONLY =           False
+RUN_NGT_NGT =                   False
 
 
 
@@ -138,14 +138,14 @@ def run_benchmark(config: Config):
             "env LD_PRELOAD=/usr/lib64/libnvidia-ml.so.1" if isNGT else "",
             "mpirun" if isNGT else "cmsenv_mpirun",
             "" if isNGT else "--mca oob_tcp_if_exclude enp4s0f4u1u2c2",
-            *(["--mca pml ob1 --mca btl vader,self,tcp"] if config.is_same_machine else [
+            *(["--mca pml ob1 --mca btl vader,self"] if config.is_same_machine else [
                 "--mca pml ucx",
                 "-x UCX_TLS=" + config.ucx_tls,
                 "-x UCX_PROTO_INFO=y", # to se e.g. which TLS are used
                 "-x UCX_USE_MT_MUTEX=y",
                 "-x UCX_RNDV_SCHEME=put_ppln"
             ]),
-            "--hostfile /etc/mpi/hostfile" if isNGT else "",
+            "--hostfile /etc/mpi/hostfile" if (isNGT and not config.is_same_machine) else "",
             "--prtemca plm_ssh_agent " + os.path.join(os.path.dirname(os.path.abspath(__file__)), "env_ompi_kubexec.sh") if isNGT else "",
             f"-x EXPERIMENT_THREADS={config.ts[0]}",
             f"-x EXPERIMENT_STREAMS={config.ts[1]}",
@@ -237,7 +237,7 @@ def main():
     # Before running tests, enable "print_cmd_no_run" to check that the commands are correct!
 
 
-    GlobalConfig.mpi_impl = "OpenMPI"
+    GlobalConfig.mpi_impl = "mpich"
     GlobalConfig.print_cmd_no_run = False
     GlobalConfig.run_first_ts_pair_only = False
     GlobalConfig.log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
