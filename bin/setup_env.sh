@@ -1,16 +1,18 @@
 #! /bin/bash
 
-# get CMSSW_BASE from a file in this directory named "cmssw_basedir"
-if [ ! -f cmssw_basedir ]; then
-    echo "Please create a file named 'cmssw_basedir' in toolbox/bin/ containing the path to use as 'CMSSW_BASE', e.g. '/path/to/CMSSW_16_0_0_pre3/'."
+this_script_dir=$(dirname "${BASH_SOURCE[0]}")
+
+path_to_cmssw_basedir="$this_script_dir/cmssw_basedir"
+if [ ! -f $path_to_cmssw_basedir ]; then
+    echo "Please create a file named 'cmssw_basedir' in $this_script_dir containing the path to use as 'CMSSW_BASE', e.g. '/path/to/CMSSW_16_0_0_pre3/'."
     exit 1
 fi
 
 
-CMSSW_BASE=$(cat cmssw_basedir)
+CMSSW_BASE=$(cat $path_to_cmssw_basedir)
 
 if [ ! -d $CMSSW_BASE ]; then
-    echo "The CMSSW_BASE directory '$CMSSW_BASE' does not exist. Please check the path in 'toolbox/bin/cmssw_basedir'."
+    echo "The CMSSW_BASE directory '$CMSSW_BASE' does not exist. Please check the path in $path_to_cmssw_basedir."
     exit 1
 fi
 
