@@ -10,17 +10,17 @@ import sys
 
 # switch on/off each test
 # options common to all tests are set directly in main()
-RUN_MILAN_STANDALONE_CPUONLY =  False
-RUN_MILAN_STANDALONE =          False
-RUN_MILAN_MILAN_CPUONLY =       False
-RUN_MILAN_MILAN =               False
-RUN_MILAN_GENOA_CPUONLY =       False
-RUN_MILAN_GENOA =               False
+RUN_MILAN_STANDALONE_CPUONLY =  True
+RUN_MILAN_STANDALONE =          True
+RUN_MILAN_MILAN_CPUONLY =       True
+RUN_MILAN_MILAN =               True
+RUN_MILAN_GENOA_CPUONLY =       True
+RUN_MILAN_GENOA =               True
 
-RUN_NGT_STANDALONE_CPUONLY =    True
-RUN_NGT_STANDALONE =            True
-RUN_NGT_NGT_XSOCKET_CPUONLY =   True
-RUN_NGT_NGT_XSOCKET =           True
+RUN_NGT_STANDALONE_CPUONLY =    False
+RUN_NGT_STANDALONE =            False
+RUN_NGT_NGT_XSOCKET_CPUONLY =   False
+RUN_NGT_NGT_XSOCKET =           False
 RUN_NGT_NGT_CPUONLY =           False
 RUN_NGT_NGT =                   False
 
@@ -74,7 +74,6 @@ class Config(GlobalConfig):
             sys.exit(1)
         if self.config_local != "" and self.config_remote != "":
             # if using MPI
-            print("config_local and config_remote are set. using MPI!")
             if self.mpi_impl not in ["OpenMPI", "MPICH"]:
                 print("Unknown mpi_impl %s. Supported are OpenMPI and MPICH" % self.mpi_impl)
                 sys.exit(1)
@@ -171,7 +170,7 @@ def run_benchmark(config: Config):
             "--launcher-exec " + os.path.abspath("env_mpich_kubexec.sh") if isNGT else "",
             "-genv UCX_TLS=" + config.ucx_tls,
             "-genv UCX_LOG_LEVEL=info", # to se e.g. which TLS are used
-            "-genv UCX_RNDV_THRESH=inf",
+            "-genv UCX_RNDV_SCHEME=put_ppln",
             "" if isNGT else "-hosts " + config.host_local + "," + config.host_remote,
             "--bind-to none",
             f"-genv EXPERIMENT_THREADS {config.ts[0]}",
@@ -198,13 +197,15 @@ def run_benchmark(config: Config):
     tmp_log_file = os.path.join(config.log_dir, "tmp.log")
 
     print("Run %d. [t,s] = [%d,%d]" % (config.runID, config.ts[0], config.ts[1]))
+    print("cpus_local:", config.cpus_local)
+    if not isStandalone: print("cpus_remote:", config.cpus_remote)
     print("Command:")
     print(" ".join(cmd))
     if not config.print_cmd_no_run:
         log_file_path = os.path.join(config.log_dir,
                                      f"{config.mpi_impl}_{config.label}_t{config.ts[0]}_s{config.ts[1]}_r{config.runID}.log")
         print("Logging to:", tmp_log_file)
-        print("Final log will be saved to:", log_file_path)
+        print("logs will be saved to:", log_file_path)
         with open(tmp_log_file, "w") as log_file:
             log_file.write("Command:\n")
             log_file.write(" ".join(cmd) + "\n")
@@ -222,7 +223,6 @@ def run_benchmark(config: Config):
         # append throughput to log filename and rename
 
         os.rename(tmp_log_file, log_file_path)
-        print("Final log saved.")
         print("Throughput this run:", throughput_this_run, "events/s")
         print()
 
@@ -235,9 +235,10 @@ def main():
     # Config unrelated to specific tests is set (when needed) above, in run_benchmark()
     
     # Before running tests, enable "print_cmd_no_run" to check that the commands are correct!
+    # And maybe then do a first run with "run_first_ts_pair_only" to verify that all tests will run fine.
 
 
-    GlobalConfig.mpi_impl = "mpich"
+    GlobalConfig.mpi_impl = "OpenMPI" # "OpenMPI" or "MPICH"
     GlobalConfig.print_cmd_no_run = False
     GlobalConfig.run_first_ts_pair_only = False
     GlobalConfig.log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
@@ -255,7 +256,7 @@ def main():
             config = Config()
             config.environment = "HLT"
             config.host_local = "gputest-milan-02"
-            config.config_local = "hlt_test.py"
+            config.config_local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_test.py")
             config.label = "milan_standalone_cpuonly"
             config.cuda_visible_devices_local = ""
 
@@ -264,7 +265,6 @@ def main():
             for ts in ts_pairs:
                 config.ts = ts
                 config.cpus_local = range(32, 32 + ts[0])
-                print("cpus_local:", config.cpus_local)
 
                 run_benchmark(config)
                 if config.run_first_ts_pair_only: break
@@ -275,7 +275,7 @@ def main():
             config = Config()
             config.environment = "HLT"
             config.host_local = "gputest-milan-02"
-            config.config_local = "hlt_test.py"
+            config.config_local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_test.py")
             config.label = "milan_standalone"
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
@@ -283,7 +283,6 @@ def main():
             for ts in ts_pairs:
                 config.ts = ts
                 config.cpus_local = range(32, 32 + ts[0])
-                print("cpus_local:", config.cpus_local)
 
                 run_benchmark(config)
                 if config.run_first_ts_pair_only: break
@@ -299,8 +298,8 @@ def main():
             config.is_same_machine = True
             config.cuda_visible_devices_local = ""
             config.cuda_visible_devices_remote = ""
-            config.config_local = "hlt_local.py"
-            config.config_remote = "hlt_remote.py"
+            config.config_local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_local.py")
+            config.config_remote = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_remote.py")
             config.label = "milan_milan_2sockets_cpuonly"
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
@@ -321,8 +320,8 @@ def main():
             config.host_local = "gputest-milan-02"
             config.host_remote = "gputest-milan-02"
             config.is_same_machine = True
-            config.config_local = "hlt_local.py"
-            config.config_remote = "hlt_remote.py"
+            config.config_local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_local.py")
+            config.config_remote = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_remote.py")
             config.label = "milan_milan_2sockets"
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
@@ -348,8 +347,8 @@ def main():
             config.cuda_visible_devices_local = ""
             config.cuda_visible_devices_remote = ""
             config.ucx_tls = "rc_mlx5,rc_x,ud_x,sm,self,cuda_copy,cuda_ipc,gdr_copy"
-            config.config_local = "hlt_local.py"
-            config.config_remote = "hlt_remote.py"
+            config.config_local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_local.py")
+            config.config_remote = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_remote.py")
             config.label = "milan_genoa_ib100G_cpuonly"
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
@@ -373,8 +372,8 @@ def main():
             config.ucx_net_devices_local = "mlx5_2:1"
             config.ucx_net_devices_remote = "mlx5_0:1"
             config.ucx_tls = "rc_mlx5,rc_x,ud_x,sm,self,cuda_copy,cuda_ipc,gdr_copy"
-            config.config_local = "hlt_local.py"
-            config.config_remote = "hlt_remote.py"
+            config.config_local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_local.py")
+            config.config_remote = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/hlt_remote.py")
             config.label = "milan_genoa_ib100G"
 
             ts_pairs = [[32, 24], [24, 18], [16, 12], [8, 6]]
