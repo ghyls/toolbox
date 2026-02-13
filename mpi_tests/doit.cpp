@@ -64,28 +64,47 @@ int main(int argc, char *argv[]) {
   void *send_buffer = nullptr;
   void *recv_buffer = nullptr;
 
-  bool send_on_device = (rank == 0 && (mode == "DtoH" || mode == "DtoD"));
-  bool recv_on_device = (rank == 1 && (mode == "HtoD" || mode == "DtoD"));
+  bool send_on_device = false;
+  bool recv_on_device = false;
 
-  if (rank == 0) {
-    if (send_on_device) {
-      if (gpuMalloc(&send_buffer, buffer_size) != gpuSuccess) {
-        std::cerr << "Error: gpuMalloc failed for send buffer\n";
-        MPI_Finalize();
-        return 1;
-      }
-    } else {
-      send_buffer = malloc(buffer_size); // Use standard malloc for host memory
+  if (mode == "HtoD") {
+    send_on_device = (rank == 1);
+    recv_on_device = (rank == 1);
+  } else if (mode == "DtoH") {
+    send_on_device = (rank == 0);
+    recv_on_device = (rank == 0);
+  } else if (mode == "DtoD") {
+    send_on_device = true;
+    recv_on_device = true;
+  }
+
+  if (send_on_device) {
+    if (gpuMalloc(&send_buffer, buffer_size) != gpuSuccess) {
+      std::cerr << "Error: gpuMalloc failed for send buffer\n";
+      MPI_Finalize();
+      return 1;
     }
   } else {
-    if (recv_on_device) {
-      if (gpuMalloc(&recv_buffer, buffer_size) != gpuSuccess) {
-        std::cerr << "Error: gpuMalloc failed for recv buffer\n";
-        MPI_Finalize();
-        return 1;
-      }
-    } else {
-      recv_buffer = malloc(buffer_size); // Use standard malloc for host memory
+    send_buffer = malloc(buffer_size);
+    if (!send_buffer) {
+      std::cerr << "Error: malloc failed for send buffer\n";
+      MPI_Finalize();
+      return 1;
+    }
+  }
+
+  if (recv_on_device) {
+    if (gpuMalloc(&recv_buffer, buffer_size) != gpuSuccess) {
+      std::cerr << "Error: gpuMalloc failed for recv buffer\n";
+      MPI_Finalize();
+      return 1;
+    }
+  } else {
+    recv_buffer = malloc(buffer_size);
+    if (!recv_buffer) {
+      std::cerr << "Error: malloc failed for recv buffer\n";
+      MPI_Finalize();
+      return 1;
     }
   }
 
@@ -113,9 +132,12 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < n_warmup_iterations; i++) {
       if (rank == 0) {
         MPI_Send(send_buffer, msg_size, MPI_BYTE, 1, 0, MPI_COMM_WORLD);
+        MPI_Recv(recv_buffer, msg_size, MPI_BYTE, 1, 1, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
       } else {
         MPI_Recv(recv_buffer, msg_size, MPI_BYTE, 0, 0, MPI_COMM_WORLD,
                  MPI_STATUS_IGNORE);
+        MPI_Send(send_buffer, msg_size, MPI_BYTE, 0, 1, MPI_COMM_WORLD);
       }
     }
 
@@ -125,9 +147,12 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < n_measurement_iterations; i++) {
       if (rank == 0) {
         MPI_Send(send_buffer, msg_size, MPI_BYTE, 1, 0, MPI_COMM_WORLD);
+        MPI_Recv(recv_buffer, msg_size, MPI_BYTE, 1, 1, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
       } else {
         MPI_Recv(recv_buffer, msg_size, MPI_BYTE, 0, 0, MPI_COMM_WORLD,
                  MPI_STATUS_IGNORE);
+        MPI_Send(send_buffer, msg_size, MPI_BYTE, 0, 1, MPI_COMM_WORLD);
       }
     }
 
@@ -136,25 +161,29 @@ int main(int argc, char *argv[]) {
 
     if (rank == 0) {
       double time_per_msg =
-          (end_time - start_time) / n_measurement_iterations * 1e6;
+          (end_time - start_time) / n_measurement_iterations / 2.0 * 1e6;
       size_t bytes = msg_size;
       double bw_gbps = (bytes * 8 / 1e9) / (time_per_msg / 1e6);
       std::cout << bytes << " " << time_per_msg << " " << bw_gbps << "\n";
     }
   }
 
-  if (rank == 0) {
-    if (send_on_device) {
-      gpuFree(send_buffer);
-    } else {
-      gpuFreeHost(send_buffer);
+  if (send_on_device) {
+    auto status = gpuFree(send_buffer);
+    if (status != gpuSuccess) {
+      std::cerr << "Warning: gpuFree failed for send buffer\n";
     }
   } else {
-    if (recv_on_device) {
-      gpuFree(recv_buffer);
-    } else {
-      gpuFreeHost(recv_buffer);
+    free(send_buffer);
+  }
+
+  if (recv_on_device) {
+    auto status = gpuFree(recv_buffer);
+    if (status != gpuSuccess) {
+      std::cerr << "Warning: gpuFree failed for recv buffer\n";
     }
+  } else {
+    free(recv_buffer);
   }
 
   MPI_Finalize();

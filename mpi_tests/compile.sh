@@ -16,7 +16,6 @@ if [ -z "$MPICXX_PATH" ]; then
   echo "Error: mpicxx not found in PATH. Please install MPI or set PATH correctly." >&2
   exit 1
 fi
-MPI_BASE=$(dirname $(dirname "$MPICXX_PATH"))
 
 SOURCE="doit.cpp"
 OUTPUT="main"
@@ -31,15 +30,15 @@ if [ "$BACKEND" = "cuda" ]; then
   
   g++ -o "$OUTPUT" "$SOURCE" \
     -DUSE_CUDA \
-    -I"${MPI_BASE}/include" \
+    -I"$(mpicxx --showme:incdirs)" \
     -I"${CUDA_BASE}/include" \
-    -L"${MPI_BASE}/lib" \
+    -L"$(mpicxx --showme:libdirs)" \
     -L"${CUDA_BASE}/lib64" \
     -std=c++20 \
     -lmpi \
     -lcudart \
     -lpthread \
-    -Wl,-rpath,"${MPI_BASE}/lib" \
+    -Wl,-rpath,"$(mpicxx --showme:libdirs)" \
     -Wl,-rpath,"${CUDA_BASE}/lib64"
 
 elif [ "$BACKEND" = "rocm" ]; then
@@ -52,15 +51,15 @@ elif [ "$BACKEND" = "rocm" ]; then
   
   g++ -o "$OUTPUT" "$SOURCE" \
     -DUSE_ROCM \
-    -I"${MPI_BASE}/include" \
+    -I"$(mpicxx --showme:incdirs)" \
     -I"${ROCM_BASE}/include" \
-    -L"${MPI_BASE}/lib" \
+    -L"$(mpicxx --showme:libdirs)" \
     -L"${ROCM_BASE}/lib" \
     -std=c++20 \
     -lmpi \
     -lamdhip64 \
     -lpthread \
-    -Wl,-rpath,"${MPI_BASE}/lib" \
+    -Wl,-rpath,"$(mpicxx --showme:libdirs)" \
     -Wl,-rpath,"${ROCM_BASE}/lib"
 
 else
