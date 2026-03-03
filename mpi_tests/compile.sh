@@ -42,12 +42,12 @@ if [ "$BACKEND" = "cuda" ]; then
     -Wl,-rpath,"${CUDA_BASE}/lib64"
 
 elif [ "$BACKEND" = "rocm" ]; then
-  HIPCC_PATH=$(which hipcc 2>/dev/null)
-  if [ -z "$HIPCC_PATH" ]; then
-    echo "Error: hipcc not found in PATH." >&2
+    HIPCONFIG_PATH=$(which hipconfig 2>/dev/null)
+  if [ -z "$HIPCONFIG_PATH" ]; then
+   echo "Error: hipconfig not found in PATH." >&2
     exit 1
   fi
-  ROCM_BASE=$(dirname $(dirname "$HIPCC_PATH"))
+  ROCM_BASE=$(hipconfig --path)
   
   g++ -o "$OUTPUT" "$SOURCE" \
     -DUSE_ROCM \
