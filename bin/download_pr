@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+"""
+Download all interactions (comments, review threads, reviews, code references)
+from a GitHub pull request via the `gh` CLI, and write them to <PR_NUMBER>.json.
+
+Usage:
+    ./download_pr <PR_URL>
+
+Example:
+    ./download_pr https://github.com/cms-sw/cmssw/pull/50503
+    -> writes 50503.json
+"""
+
+import json
+import re
+import subprocess
+import sys
+
+
+def parse_pr_url(url: str):
+    m = re.search(r"github\.com/([^/]+)/([^/]+)/pull/(\d+)", url)
+    if not m:
+        sys.exit(f"error: could not parse owner/repo/PR number from: {url}")
+    owner, repo, number = m.group(1), m.group(2), int(m.group(3))
+    return owner, repo, number
+
+
+def gh_api(path: str):
+    """Call `gh api --paginate` and return the combined list of JSON items.
+
+    gh emits one JSON array per page, concatenated back to back, so we
+    decode documents one at a time instead of assuming a single JSON value.
+    """
+    result = subprocess.run(
+        ["gh", "api", "--paginate", path],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        sys.exit(f"error: `gh api {path}` failed:\n{result.stderr}")
+
+    text = result.stdout.strip()
+    if not text:
+        return []
+
+    decoder = json.JSONDecoder()
+    items = []
+    idx = 0
+    while idx < len(text):
+        while idx < len(text) and text[idx] in " \n\t\r":
+            idx += 1
+        if idx >= len(text):
+            break
+        obj, end = decoder.raw_decode(text, idx)
+        items.extend(obj if isinstance(obj, list) else [obj])
+        idx = end
+    return items
+
+
+def gh_api_single(path: str):
+    result = subprocess.run(
+        ["gh", "api", path], capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        sys.exit(f"error: `gh api {path}` failed:\n{result.stderr}")
+    return json.loads(result.stdout)
+
+
+def user_login(user: dict | None) -> str | None:
+    return user["login"] if user else None
+
+
+def strip_pr(pr: dict) -> dict:
+    return {
+        "number": pr["number"],
+        "title": pr["title"],
+        "body": pr.get("body"),
+        "author": user_login(pr.get("user")),
+        "state": pr["state"],
+        "merged": pr.get("merged"),
+        "base_ref": pr["base"]["ref"],
+        "head_ref": pr["head"]["ref"],
+    }
+
+
+def strip_issue_comment(c: dict) -> dict:
+    """General (non-inline) conversation comment."""
+    return {
+        "author": user_login(c.get("user")),
+        "created_at": c["created_at"],
+        "body": c.get("body"),
+    }
+
+
+def strip_review(r: dict) -> dict:
+    """Top-level review verdict (approve / request changes / comment)."""
+    return {
+        "author": user_login(r.get("user")),
+        "state": r["state"],
+        "submitted_at": r.get("submitted_at"),
+        "body": r.get("body"),
+    }
+
+
+def strip_review_comment(c: dict) -> dict:
+    """Inline review comment: keeps the reference to the code (file/line)
+    *and* the code itself, since the commit a comment was made against may
+    no longer exist locally after a force-push/rebase.
+
+    - `diff_hunk` is the snippet of code (with surrounding context) the
+      comment is anchored to, as it looked at `commit` (the original
+      commit, not necessarily the PR's current HEAD).
+    - Any `body` text is kept as-is; when a reviewer proposes a fix via a
+      GitHub "suggested change", it's embedded in `body` as a
+      ```suggestion ... ``` fenced block, so no extra extraction is needed.
+    """
+    return {
+        "id": c["id"],
+        "author": user_login(c.get("user")),
+        "created_at": c["created_at"],
+        "body": c.get("body"),
+        "path": c.get("path"),
+        "line": c.get("line") or c.get("original_line"),
+        "start_line": c.get("start_line"),
+        "commit": c.get("original_commit_id") or c.get("commit_id"),
+        "diff_hunk": c.get("diff_hunk"),
+    }
+
+
+def build_review_threads(review_comments: list[dict]) -> list[dict]:
+    """Group inline review comments into threads: each thread is a root
+    comment (a specific file/line reference) plus its ordered replies.
+
+    `id`/`in_reply_to_id` are only needed to build the tree; once nesting
+    encodes the reply structure they're dropped from the output.
+    """
+    by_id = {c["id"]: strip_review_comment(c) for c in review_comments}
+    roots = []
+    children: dict[int, list[dict]] = {}
+
+    for c in review_comments:
+        stripped = by_id[c["id"]]
+        parent = c.get("in_reply_to_id")
+        if parent:
+            children.setdefault(parent, []).append(stripped)
+        else:
+            roots.append(stripped)
+
+    def attach_replies(node: dict):
+        node_id = node.pop("id")
+        replies = sorted(
+            children.get(node_id, []), key=lambda x: x["created_at"]
+        )
+        for r in replies:
+            attach_replies(r)
+        node["replies"] = replies
+
+    for root in roots:
+        attach_replies(root)
+
+    roots.sort(key=lambda x: x["created_at"])
+    return roots
+
+
+def strip_commit(c: dict) -> dict:
+    return {
+        "sha": c["sha"],
+        "message": c.get("commit", {}).get("message"),
+    }
+
+
+def main():
+    if len(sys.argv) != 2:
+        sys.exit(f"usage: {sys.argv[0]} <PR_URL>")
+
+    owner, repo, number = parse_pr_url(sys.argv[1])
+    base = f"repos/{owner}/{repo}"
+
+    print(f"Fetching PR {owner}/{repo}#{number} ...", file=sys.stderr)
+    pr = gh_api_single(f"{base}/pulls/{number}")
+
+    print("Fetching issue (conversation) comments ...", file=sys.stderr)
+    issue_comments = gh_api(f"{base}/issues/{number}/comments")
+
+    print("Fetching reviews ...", file=sys.stderr)
+    reviews = gh_api(f"{base}/pulls/{number}/reviews")
+
+    print("Fetching inline review comments ...", file=sys.stderr)
+    review_comments = gh_api(f"{base}/pulls/{number}/comments")
+
+    print("Fetching commits ...", file=sys.stderr)
+    commits = gh_api(f"{base}/pulls/{number}/commits")
+
+    output = {
+        "pull_request": strip_pr(pr),
+        "conversation_comments": [strip_issue_comment(c) for c in issue_comments],
+        "reviews": [strip_review(r) for r in reviews],
+        "review_threads": build_review_threads(review_comments),
+        "commits": [strip_commit(c) for c in commits],
+    }
+
+    out_path = f"{number}.json"
+    with open(out_path, "w") as f:
+        json.dump(output, f, separators=(",", ":"))
+
+    print(f"Wrote {out_path}", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()
